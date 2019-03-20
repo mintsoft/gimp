@@ -226,6 +226,7 @@ Name: gimp32on64\compat; Description: "{cm:ComponentsCompat}"; Types: full custo
 [Tasks]
 Name: desktopicon; Description: "{cm:AdditionalIconsDesktop}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 Name: quicklaunchicon; Description: "{cm:AdditionalIconsQuickLaunch}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: fileassoc; Description: "{cm:_SelectAssociationsCaption}"; Flags: checked
 
 [Icons]
 #if Defined(DEVEL) && DEVEL != ""
