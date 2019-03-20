@@ -226,6 +226,7 @@ Name: gimp32on64\compat; Description: "{cm:ComponentsCompat}"; Types: full custo
 [Tasks]
 Name: desktopicon; Description: "{cm:AdditionalIconsDesktop}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 Name: quicklaunchicon; Description: "{cm:AdditionalIconsQuickLaunch}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: fileassoc; Description: "{cm:_SelectAssociationsCaption}"; Flags: checked
 
 [Icons]
 #if Defined(DEVEL) && DEVEL != ""
@@ -746,96 +747,98 @@ var lblAssocInfo: TNewStaticText;
 	//lblInfo: TNewStaticText;
 begin
 	DebugMsg('InitCustomPages','pgAssociations');
-	Associations.AssociationsPage.Page := CreateCustomPage(wpSelectComponents,CustomMessage('SelectAssociationsCaption'),CustomMessage('SelectAssociationsCaption'));
+	if IsTaskSelected('fileassoc') then	
+		Associations.AssociationsPage.Page := CreateCustomPage(wpSelectComponents,CustomMessage('SelectAssociationsCaption'),CustomMessage('SelectAssociationsCaption'));
 
-	lblAssocInfo := TNewStaticText.Create(Associations.AssociationsPage.Page);
-	with lblAssocInfo do
-	begin
-		Parent := Associations.AssociationsPage.Page.Surface;
-		Left := 0;
-		Top := 0;
-		Width := Associations.AssociationsPage.Page.SurfaceWidth;
-		Height := ScaleY(13);
-		WordWrap := True;
-		AutoSize := True;
-		Caption := CustomMessage('SelectAssociationsInfo1')+#13+CustomMessage('SelectAssociationsInfo2')+#13;
-	end;	
-	Associations.AssociationsPage.lblAssocInfo2 := TNewStaticText.Create(Associations.AssociationsPage.Page);
-	with Associations.AssociationsPage.lblAssocInfo2 do
-	begin
-		Parent := Associations.AssociationsPage.Page.Surface;
-		Left := 0;
-		Width := Associations.AssociationsPage.Page.SurfaceWidth;
-		Height := 13;
-		AutoSize := True;
-		Caption := #13+CustomMessage('SelectAssociationsExtensions');
+		lblAssocInfo := TNewStaticText.Create(Associations.AssociationsPage.Page);
+		with lblAssocInfo do
+		begin
+			Parent := Associations.AssociationsPage.Page.Surface;
+			Left := 0;
+			Top := 0;
+			Width := Associations.AssociationsPage.Page.SurfaceWidth;
+			Height := ScaleY(13);
+			WordWrap := True;
+			AutoSize := True;
+			Caption := CustomMessage('SelectAssociationsInfo1')+#13+CustomMessage('SelectAssociationsInfo2')+#13;
+		end;	
+		Associations.AssociationsPage.lblAssocInfo2 := TNewStaticText.Create(Associations.AssociationsPage.Page);
+		with Associations.AssociationsPage.lblAssocInfo2 do
+		begin
+			Parent := Associations.AssociationsPage.Page.Surface;
+			Left := 0;
+			Width := Associations.AssociationsPage.Page.SurfaceWidth;
+			Height := 13;
+			AutoSize := True;
+			Caption := #13+CustomMessage('SelectAssociationsExtensions');
+		end;
+		
+		Associations.AssociationsPage.clbAssociations := TNewCheckListBox.Create(Associations.AssociationsPage.Page);
+		with Associations.AssociationsPage.clbAssociations do
+		begin
+			Parent := Associations.AssociationsPage.Page.Surface;
+			Left := 0;
+			Top := lblAssocInfo.Top + lblAssocInfo.Height;
+			Width := Associations.AssociationsPage.Page.SurfaceWidth;
+			Height := Associations.AssociationsPage.Page.SurfaceHeight - lblAssocInfo.Height - Associations.AssociationsPage.lblAssocInfo2.Height - ScaleX(8);
+			TabOrder := 1;
+			Flat := True;
+
+					// the box's height, minus the 2-pixel border, has to be a
+					// multiple of the item height, which has to be even, otherwise
+					// clicking the last visible item may scroll to the next item,
+					// causing it to be toggled.  see bug #786840.
+					MinItemHeight := ScaleY(16) / 2 * 2;
+					Height := (Height - 4) / MinItemHeight * MinItemHeight + 4;
+
+			Associations.AssociationsPage.lblAssocInfo2.Top := Height + Top;
+
+			OnClick := @Associations_OnClick;
+
+			for i := 0 to GetArrayLength(Associations.Association) - 1 do
+				AddCheckBox(Associations.Association[i].Description,
+							'',
+							0,
+							Associations.Association[i].Selected,
+							not Associations.Association[i].Associated, //don't allow unchecking associations that are already present
+							False,
+							False,
+							nil
+						   );			
+
+		end;
+
+		SetArrayLength(ButtonText, 3);
+		ButtonText[0] := CustomMessage('SelectAssociationsSelectUnused');
+		ButtonText[1] := CustomMessage('SelectAssociationsSelectAll');
+		ButtonText[2] := CustomMessage('SelectAssociationsUnselectAll');
+		ButtonWidth := GetButtonWidth(ButtonText, WizardForm.NextButton.Width);
+
+		btnSelectUnused := TNewButton.Create(Associations.AssociationsPage.Page);
+		with btnSelectUnused do
+		begin
+			Parent := Associations.AssociationsPage.Page.Surface;
+			Width := ButtonWidth;
+			Left := Associations.AssociationsPage.Page.SurfaceWidth - Width * 2;
+			Height := WizardForm.NextButton.Height;
+			Top := Associations.AssociationsPage.clbAssociations.Top + Associations.AssociationsPage.clbAssociations.Height + ScaleX(8);
+			Caption := CustomMessage('SelectAssociationsSelectUnused');
+			OnClick := @Associations_SelectUnused;
+		end;
+
+		btnSelectAll := TNewButton.Create(Associations.AssociationsPage.Page);
+		with btnSelectAll do
+		begin
+			Parent := Associations.AssociationsPage.Page.Surface;
+			Width := ButtonWidth;
+			Left := Associations.AssociationsPage.Page.SurfaceWidth - Width;
+			Height := WizardForm.NextButton.Height;
+			Top := Associations.AssociationsPage.clbAssociations.Top + Associations.AssociationsPage.clbAssociations.Height + ScaleX(8);
+			Caption := CustomMessage('SelectAssociationsSelectAll');
+			OnClick := @Associations_SelectAll;
+		end;
 	end;
 	
-	Associations.AssociationsPage.clbAssociations := TNewCheckListBox.Create(Associations.AssociationsPage.Page);
-	with Associations.AssociationsPage.clbAssociations do
-	begin
-		Parent := Associations.AssociationsPage.Page.Surface;
-		Left := 0;
-		Top := lblAssocInfo.Top + lblAssocInfo.Height;
-		Width := Associations.AssociationsPage.Page.SurfaceWidth;
-		Height := Associations.AssociationsPage.Page.SurfaceHeight - lblAssocInfo.Height - Associations.AssociationsPage.lblAssocInfo2.Height - ScaleX(8);
-		TabOrder := 1;
-		Flat := True;
-
-                // the box's height, minus the 2-pixel border, has to be a
-                // multiple of the item height, which has to be even, otherwise
-                // clicking the last visible item may scroll to the next item,
-                // causing it to be toggled.  see bug #786840.
-                MinItemHeight := ScaleY(16) / 2 * 2;
-                Height := (Height - 4) / MinItemHeight * MinItemHeight + 4;
-
-		Associations.AssociationsPage.lblAssocInfo2.Top := Height + Top;
-
-		OnClick := @Associations_OnClick;
-
-		for i := 0 to GetArrayLength(Associations.Association) - 1 do
-			AddCheckBox(Associations.Association[i].Description,
-			            '',
-			            0,
-			            Associations.Association[i].Selected,
-			            not Associations.Association[i].Associated, //don't allow unchecking associations that are already present
-			            False,
-			            False,
-			            nil
-			           );			
-
-	end;
-
-	SetArrayLength(ButtonText, 3);
-	ButtonText[0] := CustomMessage('SelectAssociationsSelectUnused');
-	ButtonText[1] := CustomMessage('SelectAssociationsSelectAll');
-	ButtonText[2] := CustomMessage('SelectAssociationsUnselectAll');
-	ButtonWidth := GetButtonWidth(ButtonText, WizardForm.NextButton.Width);
-
-	btnSelectUnused := TNewButton.Create(Associations.AssociationsPage.Page);
-	with btnSelectUnused do
-	begin
-		Parent := Associations.AssociationsPage.Page.Surface;
-		Width := ButtonWidth;
-		Left := Associations.AssociationsPage.Page.SurfaceWidth - Width * 2;
-		Height := WizardForm.NextButton.Height;
-		Top := Associations.AssociationsPage.clbAssociations.Top + Associations.AssociationsPage.clbAssociations.Height + ScaleX(8);
-		Caption := CustomMessage('SelectAssociationsSelectUnused');
-		OnClick := @Associations_SelectUnused;
-	end;
-
-	btnSelectAll := TNewButton.Create(Associations.AssociationsPage.Page);
-	with btnSelectAll do
-	begin
-		Parent := Associations.AssociationsPage.Page.Surface;
-		Width := ButtonWidth;
-		Left := Associations.AssociationsPage.Page.SurfaceWidth - Width;
-		Height := WizardForm.NextButton.Height;
-		Top := Associations.AssociationsPage.clbAssociations.Top + Associations.AssociationsPage.clbAssociations.Height + ScaleX(8);
-		Caption := CustomMessage('SelectAssociationsSelectAll');
-		OnClick := @Associations_SelectAll;
-	end;
-
 	DebugMsg('InitCustomPages','wpLicense');
 
 	(*pgSimple := CreateCustomPage(wpInfoBefore,SetupMessage(msgWizardReady),
@@ -1550,7 +1553,9 @@ begin
 		end;
 		ssPostInstall:
 		begin
-			Associations_Create();
+			if IsTaskSelected('fileassoc') then
+				Associations_Create();
+			end;
 			PreparePyGimp();
 			PrepareGimpEnvironment();
 			//PrepareGimpRC();
@@ -1713,8 +1718,10 @@ begin
 		Result := False;
 		exit;
 	end;
-
-	Associations_Init();
+	
+	if IsTaskSelected('fileassoc') then
+		Associations_Init();
+	end;
 
 	//if InstallMode <> imRebootContinue then
 	//	SuppressibleMsgBox(CustomMessage('UninstallWarning'),mbError,MB_OK,IDOK);
